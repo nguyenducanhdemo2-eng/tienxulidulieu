@@ -1,0 +1,53 @@
+
+#BÀi 1 KHÁM PHÁ DỮ LIỆU
+import pandas as pd
+df = pd.read_csv('/content/ITA105_Lab_1.csv')
+print("Kiểm tra kích thước dữ liệu : ", df.shape)
+print("Thống kê mô tả của các cột số : ", df.describe())
+print("Kiểm tra giá trị thiếu trong các cột : ",df.isnull().sum())
+
+#BÀI 2 XỬ LÍ DỮ LIỆU THIẾU
+import pandas as pd
+df = pd.read_csv('/content/ITA105_Lab_1.csv')
+#print("kiểm tra các giá trị thiếu" ,df.isnull().sum())
+df['Category'] = df['Category'].fillna(df['Category'].mode()[0])
+df['price'] = df['Price'].fillna(df['Price'].mean())
+df['StockQuantity'] = df['StockQuantity'].fillna(df['StockQuantity'].median())
+print(df['Price'])
+print(df['Category'])
+print(df['StockQuantity'])
+#sử dụng fillna khi có ít dữ liệu bị thiếu hoặc là muốn
+#giữ lại đầy đủ các giữ liệu và chỉ thêm các dòng thiếu,
+#còn DROPNA() là sử dụng khi dữ liệu thiếu nhiều và xóa bỏ các dữ liệu trống hoặc dữ liệu trống ko cần thiết
+#BÀI 3 XỬ LÍ DỮ LIỆU LỖI
+price_error = df[df["price"] <= 0]
+StockQuantity_error = df[df["StockQuantity"] <= 0 ]
+ratting_error = df[(df["Rating"] < 5) & (df["Rating"] > 0)]
+df.dropna()
+print(ratting_error)
+print(StockQuantity_error)
+print(price_error)
+
+# BÀI 4
+df['Price_MA'] = df['Price'].rolling(window=3).mean()
+df.dropna(inplace=True)
+print(df['Price_MA'])
+import matplotlib.pyplot as plt
+plt.figure(figsize=(10, 6))
+plt.plot(df['Price'],label='Giá Gốc')
+plt.plot(df['Price_MA'],label = 'Sau khi xử lý')
+plt.title('Biểu đồ trước và sau khi làm mượt')
+plt.xlabel("index")
+plt.ylabel("price")
+plt.legend()
+plt.show()
+
+#BÀI 5 CHUẨN HÓA DỮ LIỆU
+df['Category'] = df['Category'].str.lower()
+df['Description'] = df['Description'].astype(str)
+df['Description'] = df['Description'].str.replace(r'[.!?\-]', '', regex=True)
+df['Price_VND'] = df['Price'] * 26.348
+print(df['Category'])
+print(df['Description'])
+print(df['Price_VND'])
+
