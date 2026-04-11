@@ -1,0 +1,171 @@
+
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+from scipy import stats
+
+ #BÀI 1: HOUSING
+
+print("===== BÀI 1: HOUSING =====")
+
+df1 = pd.read_csv('ITA105_Lab_2_Housing.csv')
+
+# 1. Shape + Missing
+print("Shape:", df1.shape)
+print("Missing:\n", df1.isnull().sum())
+
+# 2. Thống kê
+print(df1.describe())
+print("Median:\n", df1.median(numeric_only=True))
+
+# 3. Boxplot
+df1.plot(kind='box', subplots=True, layout=(2,3), figsize=(10,6))
+plt.suptitle("Boxplot Housing")
+plt.show()
+
+# 4. Scatter area vs price
+plt.scatter(df1['area'], df1['price'])
+plt.title("Area vs Price")
+plt.xlabel("Area")
+plt.ylabel("Price")
+plt.show()
+
+# 5. IQR
+Q1 = df1.quantile(0.25)
+Q3 = df1.quantile(0.75)
+IQR = Q3 - Q1
+
+outlier_iqr = ((df1 < (Q1 - 1.5*IQR)) | (df1 > (Q3 + 1.5*IQR)))
+print("Outlier IQR:\n", outlier_iqr.sum())
+
+# 6. Z-score
+z1 = np.abs(stats.zscore(df1.select_dtypes(include=np.number)))
+outlier_z1 = (z1 > 3)
+print("Outlier Z-score:\n", outlier_z1.sum(axis=0))
+
+# 7. So sánh
+print("Tổng IQR:", outlier_iqr.sum().sum())
+print("Tổng Z-score:", outlier_z1.sum())
+
+# 9. Xử lý (clip)
+df1_clean = df1.copy()
+for col in df1.select_dtypes(include=np.number):
+    Q1 = df1[col].quantile(0.25)
+    Q3 = df1[col].quantile(0.75)
+    IQR = Q3 - Q1
+    lower = Q1 - 1.5*IQR
+    upper = Q3 + 1.5*IQR
+    df1_clean[col] = df1[col].clip(lower, upper)
+
+# 10. Boxplot sau xử lý
+df1_clean.plot(kind='box', subplots=True, layout=(2,3), figsize=(10,6))
+plt.suptitle("Boxplot After Cleaning")
+plt.show()
+
+# 🔥 BÀI 2: IOT
+print("===== BÀI 2: IOT =====")
+
+df2 = pd.read_csv('ITA105_Lab_2_Iot.csv')
+
+# 1. Set index
+df2['timestamp'] = pd.to_datetime(df2['timestamp'])
+df2.set_index('timestamp', inplace=True)
+
+print("Missing:\n", df2.isnull().sum())
+
+# 2. Line plot
+df2.groupby('sensor_id')['temperature'].plot(legend=True)
+plt.title("Temperature by Sensor")
+plt.show()
+
+# 3. Rolling mean
+rolling_mean = df2['temperature'].rolling(10).mean()
+rolling_std = df2['temperature'].rolling(10).std()
+
+upper = rolling_mean + 3*rolling_std
+lower = rolling_mean - 3*rolling_std
+
+outlier_roll = (df2['temperature'] > upper) | (df2['temperature'] < lower)
+print("Outlier Rolling:", outlier_roll.sum())
+
+# 4. Z-score
+z2 = np.abs(stats.zscore(df2[['temperature']]))
+outlier_z2 = (z2 > 3)
+print("Outlier Z-score:", outlier_z2.sum())
+
+# 5. Scatter
+sns.scatterplot(x='temperature', y='pressure', data=df2)
+plt.show()
+
+sns.scatterplot(x='pressure', y='humidity', data=df2)
+plt.show()
+
+# 7. Xử lý
+df2['temperature'] = df2['temperature'].interpolate()
+
+#BÀI 3: ECOMMERCE
+
+print("===== BÀI 3: ECOMMERCE =====")
+
+df3 = pd.read_csv('ITA105_Lab_2_Ecommerce.csv')
+
+# 1. Missing + describe
+print(df3.isnull().sum())
+print(df3.describe())
+
+# 2. Boxplot
+sns.boxplot(data=df3[['price','quantity','rating']])
+plt.show()
+
+# 3. IQR + Z-score
+Q1 = df3.quantile(0.25)
+Q3 = df3.quantile(0.75)
+IQR = Q3 - Q1
+
+outlier_iqr3 = ((df3 < (Q1 - 1.5*IQR)) | (df3 > (Q3 + 1.5*IQR)))
+
+z3 = np.abs(stats.zscore(df3[['price','quantity','rating']]))
+outlier_z3 = (z3 > 3)
+
+# 4. Scatter
+plt.scatter(df3['price'], df3['quantity'])
+plt.title("Price vs Quantity")
+plt.show()
+
+# 6. Xử lý
+df3 = df3[df3['price'] > 0]
+df3 = df3[df3['rating'] <= 5]
+
+df3['price'] = np.log1p(df3['price'])
+
+# 7. Vẽ lại
+sns.boxplot(data=df3[['price','quantity','rating']])
+plt.show()
+
+# MULTIVARIATE
+
+print("===== BÀI 4: MULTIVARIATE =====")
+
+# Housing
+plt.scatter(df1['area'], df1['price'])
+plt.title("Housing Multivariate")
+plt.show()
+
+# IoT
+plt.scatter(df2['temperature'], df2['pressure'])
+plt.title("IoT Multivariate")
+plt.show()
+
+# Ecommerce
+sns.pairplot(df3[['price','quantity','rating']])
+plt.show()
+
+# Z-score multivariate
+z_multi = np.abs(stats.zscore(df3.select_dtypes(include=np.number)))
+outliers_multi = (z_multi > 3)
+
+plt.scatter(df3['price'], df3['quantity'], c=outliers_multi.any(axis=1))
+plt.title("Multivariate Outlier Highlight")
+plt.show()
+
