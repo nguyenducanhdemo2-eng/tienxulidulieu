@@ -1,0 +1,137 @@
+
+import pandas as pd
+from sklearn.preprocessing import LabelEncoder
+from sklearn.feature_extraction.text import TfidfVectorizer
+from gensim.models import Word2Vec
+stop_words = ['và', 'là', 'của', 'nhưng', 'có', 'cho', 'với', 'khá', 'rất', 'hơi']
+
+def preprocess_text(text):
+    if pd.isnull(text):
+        return []
+    # Chuyển thành chữ thường
+    text = str(text).lower()
+    text = text.replace('sạch sẽ', 'sạch_sẽ')
+    text = text.replace('xuất sắc', 'xuất_sắc')
+    text = text.replace('sáng tạo', 'sáng_tạo')
+
+    tokens = text.split()
+
+    tokens = [word for word in tokens if word not in stop_words]
+    return tokens
+
+# BÀI 1
+df_hotel = pd.read_csv('ITA105_Lab_4_Hotel_reviews.csv')
+print("Missing values Bài 1:\n", df_hotel.isnull().sum())
+
+df_hotel['hotel_name'] = df_hotel['hotel_name'].fillna('Unknown')
+df_hotel['customer_type'] = df_hotel['customer_type'].fillna('Unknown')
+df_hotel['review_text'] = df_hotel['review_text'].fillna('')
+df_hotel_encoded = pd.get_dummies(df_hotel, columns=['hotel_name', 'customer_type'])
+
+# 3. Tiền xử lý văn bản
+df_hotel['tokens'] = df_hotel['review_text'].apply(preprocess_text)
+df_hotel['processed_text'] = df_hotel['tokens'].apply(lambda x: ' '.join(x))
+
+# 4. Tạo TF-IDF matrix
+vectorizer_hotel = TfidfVectorizer()
+tfidf_hotel = vectorizer_hotel.fit_transform(df_hotel['processed_text'])
+print("\nKích thước TF-IDF Matrix (Bài 1):", tfidf_hotel.shape)
+
+# 5. Tạo Word2Vec embeddings và tìm từ gần nghĩa
+w2v_hotel = Word2Vec(sentences=df_hotel['tokens'].tolist(), vector_size=50, window=3, min_count=1, sg=1)
+print("\n5 từ gần nghĩa với 'sạch_sẽ':")
+print(w2v_hotel.wv.most_similar('sạch_sẽ', topn=5))
+
+# --- TRẢ LỜI CÂU HỎI BÀI 1 ---
+# Khi nào dùng TF-IDF: Khi cần biểu diễn tầm quan trọng của một từ trong một câu/văn bản so với toàn bộ tập dữ liệu (phân loại văn bản, tìm kiếm từ khóa).
+# Khi nào dùng Word2Vec: Khi cần bắt được ý nghĩa ngữ nghĩa (semantic) của từ, biết được các từ nào hay xuất hiện cùng ngữ cảnh (ví dụ: gộp nhóm các từ đồng nghĩa).
+
+#BÀi 2
+# 1. Nạp dữ liệu
+df_match = pd.read_csv('ITA105_Lab_4_Match_comments.csv')
+
+# Xử lý missing values
+df_match['team'] = df_match['team'].fillna('Unknown')
+df_match['comment_text'] = df_match['comment_text'].fillna('')
+
+# 2. Label Encoding (Làm ví dụ thay vì One-hot)
+le = LabelEncoder()
+df_match['team_encoded'] = le.fit_transform(df_match['team'])
+
+# 3. Tiền xử lý văn bản
+df_match['tokens'] = df_match['comment_text'].apply(preprocess_text)
+df_match['processed_text'] = df_match['tokens'].apply(lambda x: ' '.join(x))
+
+# 4. Tạo TF-IDF matrix
+vectorizer_match = TfidfVectorizer()
+tfidf_match = vectorizer_match.fit_transform(df_match['processed_text'])
+
+# 5. Tạo Word2Vec và tìm từ "xuất_sắc"
+w2v_match = Word2Vec(sentences=df_match['tokens'].tolist(), vector_size=50, min_count=1, sg=1)
+print("\nTừ gần nghĩa với 'xuất_sắc' (Bài 2):")
+print(w2v_match.wv.most_similar('xuất_sắc', topn=3))
+
+# --- TRẢ LỜI CÂU HỎI BÀI 2 ---
+# So sánh TF-IDF vs Word2Vec:
+# - TF-IDF coi mỗi từ là một đặc trưng độc lập (không hiểu "tốt" và "xuất sắc" là gần nghĩa nhau).
+# - Word2Vec nhúng các từ vào không gian vector nhiều chiều, những từ có ngữ cảnh giống nhau (ví dụ "hay", "xuất sắc", "tuyệt vời") sẽ nằm gần nhau, biểu diễn ý nghĩa tốt hơn hẳn TF-IDF.
+
+#BÀI 3
+# 1. Nạp dữ liệu
+df_game = pd.read_csv('ITA105_Lab_4_Player_feedback.csv')
+
+# Xử lý missing values
+for col in ['player_type', 'device']:
+    df_game[col] = df_game[col].fillna('Unknown')
+df_game['feedback_text'] = df_game['feedback_text'].fillna('')
+
+# 2. One-Hot Encoding
+df_game_encoded = pd.get_dummies(df_game, columns=['player_type', 'device'])
+
+# 3. Tiền xử lý
+df_game['tokens'] = df_game['feedback_text'].apply(preprocess_text)
+df_game['processed_text'] = df_game['tokens'].apply(lambda x: ' '.join(x))
+
+# 4. TF-IDF Matrix
+vectorizer_game = TfidfVectorizer()
+tfidf_game = vectorizer_game.fit_transform(df_game['processed_text'])
+
+# 5. Word2Vec và tìm từ "đẹp"
+w2v_game = Word2Vec(sentences=df_game['tokens'].tolist(), vector_size=50, min_count=1, sg=1)
+print("\nTừ gần nghĩa với 'đẹp' (Bài 3):")
+print(w2v_game.wv.most_similar('đẹp', topn=3))
+
+# --- TRẢ LỜI CÂU HỎI BÀI 3 ---
+# Lựa chọn cho phân loại sentiment (cảm xúc):
+# Trong thực tế hiện nay, Word2Vec (hoặc các mô hình Embeddings tương tự) tốt hơn TF-IDF.
+# Lý do: Khi phân tích cảm xúc, máy cần hiểu ngữ nghĩa. Cụm "đồ họa đẹp" và "hình ảnh tuyệt vời" chia sẻ chung một mặt ý nghĩa tích cực, Word2Vec có thể kết nối chúng. TF-IDF chỉ đếm chữ nên sẽ coi chúng là 4 từ rời rạc hoàn toàn khác nhau.
+
+#BÀI 4
+# 1. Nạp dữ liệu
+df_album = pd.read_csv('ITA105_Lab_4_Album_reviews.csv')
+
+# Xử lý missing values
+df_album['genre'] = df_album['genre'].fillna('Unknown')
+df_album['review_text'] = df_album['review_text'].fillna('')
+
+# 2. Label Encoding cho Nền tảng (platform) và Thể loại (genre)
+df_album['platform_encoded'] = le.fit_transform(df_album['platform'])
+df_album['genre_encoded'] = le.fit_transform(df_album['genre'])
+
+# 3. Tiền xử lý văn bản
+df_album['tokens'] = df_album['review_text'].apply(preprocess_text)
+df_album['processed_text'] = df_album['tokens'].apply(lambda x: ' '.join(x))
+
+# 4. TF-IDF Matrix
+vectorizer_album = TfidfVectorizer()
+tfidf_album = vectorizer_album.fit_transform(df_album['processed_text'])
+
+# 5. Word2Vec và tìm từ "sáng_tạo"
+w2v_album = Word2Vec(sentences=df_album['tokens'].tolist(), vector_size=50, min_count=1, sg=1)
+print("\nTừ gần nghĩa với 'sáng_tạo' (Bài 4):")
+print(w2v_album.wv.most_similar('sáng_tạo', topn=3))
+
+# --- TRẢ LỜI CÂU HỎI BÀI 4 ---
+# Rút ra nhận xét:
+# TF-IDF rất phù hợp nếu chúng ta muốn dùng các mô hình Machine Learning cổ điển (như Naive Bayes, SVM) nhờ tạo ra một ma trận rõ ràng, thưa thớt (sparse matrix) và chạy cực kỳ nhanh.
+# Tuy nhiên, khả năng biểu diễn nội dung/ngữ nghĩa của Word2Vec lại vượt trội hơn hẳn. Nó là nền tảng để giải quyết các bài toán Deep Learning phức tạp hơn sau này về Xử lý ngôn ngữ tự nhiên (NLP). Tùy vào độ phức tạp của bài toán mà ta chọn công cụ phù hợp.
